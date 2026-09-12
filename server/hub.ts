@@ -80,6 +80,19 @@ export class Hub {
       this.fatal(session, 'bad_json', 'Malformed JSON frame.');
       return false;
     }
+    // The client coalesces everything it produced in one animation frame into a
+    // single array frame, so a busy stroke costs one send instead of three.
+    if (Array.isArray(parsed)) {
+      if (parsed.length > MAX_BATCH_MESSAGES) {
+        this.fatal(session, 'batch_too_large', `At most ${MAX_BATCH_MESSAGES} messages per frame.`);
+        return false;
+      }
+      let allOk = true;
+      for (const msg of parsed) {
+        if (!this.handle(session, msg)) allOk = false;
+      }
+      return allOk;
+    }
     return this.handle(session, parsed);
   }
 
@@ -352,3 +365,6 @@ export class Hub {
 
 /** Hard cap on a single inbound frame (bytes). A 4000-point stroke fits easily. */
 export const MAX_FRAME_BYTES = 96 * 1024;
+
+/** Hard cap on messages inside one batched frame. */
+export const MAX_BATCH_MESSAGES = 200;
