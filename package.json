@@ -1,0 +1,40 @@
+{
+  "name": "collaborative-canvas",
+  "version": "1.0.0",
+  "description": "Real-time collaborative drawing canvas — vanilla TypeScript + HTML5 Canvas + WebSockets, with a serverless (SSE) transport for zero-config Vercel deploys.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "node scripts/build-client.mjs",
+    "build:server": "tsc -p tsconfig.json",
+    "vercel-build": "npm run build:client",
+    "start": "npm run build && node dist/server/server.js",
+    "serve": "node dist/server/server.js",
+    "dev": "node scripts/dev.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit",
+    "test": "npm run build:server && node --test dist/test/"
+  },
+  "keywords": [
+    "canvas",
+    "websocket",
+    "collaborative",
+    "realtime",
+    "crdt",
+    "undo-redo"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.2"
+  }
+}
