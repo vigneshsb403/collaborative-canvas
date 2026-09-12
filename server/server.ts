@@ -15,7 +15,7 @@
 
 import { createServer as createHttpServer, type Server } from 'node:http';
 import { networkInterfaces } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { WebSocketServer, type WebSocket } from 'ws';
@@ -145,6 +145,9 @@ export function createCanvasServer(opts: CanvasServerOptions = {}): CanvasServer
         setHeaders: (res, filePath) => {
           if (filePath.endsWith('.html') || filePath.endsWith('config.js')) {
             res.setHeader('Cache-Control', 'no-cache');
+          } else if (filePath.includes(`${sep}assets${sep}`)) {
+            // Content-hashed filenames, so these can never go stale.
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
           }
         },
       }),

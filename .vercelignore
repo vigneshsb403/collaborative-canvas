@@ -1,0 +1,8 @@
+# The Vercel build only needs the client sources, the shared modules and the
+# api/ + server/ files that api/rt.ts imports. Everything below is dead weight
+# in the build context.
+test/
+docs/
+dist/
+node_modules/
+*.log

@@ -45,7 +45,6 @@ interface ParkedIdentity {
 }
 
 export const USER_ID_RE = /^[A-Za-z0-9_-]{6,48}$/;
-export const ROOM_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
 export const IDENTITY_TTL_MS = 10 * 60 * 1000;
 export const EMPTY_ROOM_TTL_MS = 30 * 60 * 1000;
@@ -222,10 +221,6 @@ export class RoomRegistry {
 
   peek(id: string): Room | undefined {
     return this.rooms.get(id);
-  }
-
-  list(): Room[] {
-    return [...this.rooms.values()];
   }
 
   /**

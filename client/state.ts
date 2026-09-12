@@ -55,8 +55,6 @@ export class ClientState {
   roomId = 'main';
   /** Server history version, used to detect a missed update. */
   serverHv = 0;
-  /** Server clock skew estimate, set by the transport. */
-  serverTimeOffset = 0;
 
   get selfId(): string | null {
     return this.self?.id ?? null;

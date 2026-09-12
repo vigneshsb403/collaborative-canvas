@@ -123,6 +123,9 @@ function applyEffects(effects: Effect[]): void {
 
       case 'presence':
         ui.setPresence(state);
+        // A rename can be our own (or server-sanitised), so keep the header
+        // field and presence dot in step with the roster.
+        ui.setIdentity(state);
         break;
 
       case 'cursors':

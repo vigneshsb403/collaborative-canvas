@@ -454,27 +454,6 @@ export class Renderer {
     ctx.restore();
   }
 
-  /** Draw a brush preview dot, used by the toolbar. */
-  static drawSwatch(canvas: HTMLCanvasElement, style: StrokeStyle, dpr: number): void {
-    const ctx = canvas.getContext('2d');
-    if (ctx === null) return;
-    const size = canvas.clientWidth || 28;
-    canvas.width = Math.round(size * dpr);
-    canvas.height = Math.round(size * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, size, size);
-    const r = Math.max(1, Math.min(size / 2 - 2, style.width / 2));
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, r, 0, TAU);
-    if (style.tool === 'eraser') {
-      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    } else {
-      ctx.fillStyle = style.color;
-      ctx.fill();
-    }
-  }
 }
 
 const CURSOR_FADE_MS = 2500;
