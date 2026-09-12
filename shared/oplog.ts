@@ -38,6 +38,17 @@ export class OpLog {
     return this.ops.length;
   }
 
+  /** Drop everything. Used by a client adopting a full snapshot. */
+  reset(): void {
+    this.ops.length = 0;
+    this.index.clear();
+    this.clears.length = 0;
+    this.seq = 0;
+    this.hv = 0;
+    this.activeClearSeq = 0;
+    this.truncatedBelowSeq = 0;
+  }
+
   has(id: string): boolean {
     return this.index.has(id);
   }

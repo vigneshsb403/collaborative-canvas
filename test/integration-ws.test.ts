@@ -3,6 +3,9 @@
  * Nothing is stubbed: `ws` client -> TCP -> Express/`ws` server -> Hub.
  */
 
+// Keep the server's join/leave logging out of the test output.
+process.env.QUIET_LOGS = '1';
+
 import { strict as assert } from 'node:assert';
 import { after, before, describe, it } from 'node:test';
 import { LIMITS, PROTOCOL_VERSION } from '../shared/protocol.js';

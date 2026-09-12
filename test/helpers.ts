@@ -17,8 +17,8 @@ export interface Harness {
   close(): Promise<void>;
 }
 
-export async function startHarness(): Promise<Harness> {
-  const server = createCanvasServer({ serveStatic: false });
+export async function startHarness(opts: { serveStatic?: boolean } = {}): Promise<Harness> {
+  const server = createCanvasServer({ serveStatic: opts.serveStatic === true });
   const port = await server.listen(0, '127.0.0.1');
   return {
     port,

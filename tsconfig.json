@@ -20,5 +20,8 @@
     "skipLibCheck": true,
     "verbatimModuleSyntax": false
   },
-  "include": ["shared/**/*.ts", "server/**/*.ts", "api/**/*.ts", "test/**/*.ts"]
+  // `client/state.ts` is deliberately DOM-free so the reconciliation logic can be
+  // unit-tested in Node; it is compiled here for that purpose. The rest of the
+  // client is bundled by esbuild and typechecked by tsconfig.client.json.
+  "include": ["shared/**/*.ts", "server/**/*.ts", "api/**/*.ts", "test/**/*.ts", "client/state.ts"]
 }
