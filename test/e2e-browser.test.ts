@@ -549,6 +549,58 @@ describe('browser: robustness', () => {
     await closeBoth(a, b);
   });
 
+  it('resumes a stroke that was interrupted by a reconnect, leaving no phantom', async (t) => {
+    if (maybeSkip(t)) return;
+    const { a, b } = await open();
+    await a.eval('window.__canvas.drawing.setWidth(14)');
+
+    // Drop the connection and begin a stroke while it is down, all in one
+    // evaluation so the reconnect cannot land in the middle. The stroke's
+    // `begin` is therefore sitting in the outbound queue under an id the server
+    // has never seen, which is the exact condition that used to leave a phantom.
+    const before = await a.page.evaluate(`(() => {
+      const el = document.getElementById('overlay');
+      const r = el.getBoundingClientRect();
+      const at = (wx, wy) => ({ clientX: r.left + (wx / 1600) * r.width, clientY: r.top + (wy / 1000) * r.height });
+      const ev = (type, wx, wy) => el.dispatchEvent(new PointerEvent(type, {
+        pointerId: 99, isPrimary: true, button: type === 'pointermove' ? -1 : 0,
+        buttons: 1, pointerType: 'mouse', bubbles: true, cancelable: true, ...at(wx, wy),
+      }));
+      window.__canvas.transport.dropConnection('test_drop');
+      ev('pointerdown', 250, 300);
+      ev('pointermove', 500, 420);
+      ev('pointermove', 800, 300);
+      window.__canvas.drawing.tick(1e9);   // force the point outbox into the queue
+      return { status: window.__canvas.transport.status, queued: window.__canvas.transport.queue.length };
+    })()`) as { status: string; queued: number };
+
+    assert.equal(before.status, 'reconnecting', 'the stroke really did start while offline');
+    assert.ok(before.queued > 0, 'and its messages really are queued');
+
+    await waitState(a, "window.__canvas.transport.status === 'online'", 15_000);
+
+    // Finish the stroke now that we are back.
+    await a.page.evaluate(`(() => {
+      const el = document.getElementById('overlay');
+      const r = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent('pointerup', {
+        pointerId: 99, isPrimary: true, button: 0, buttons: 0, pointerType: 'mouse',
+        bubbles: true, cancelable: true,
+        clientX: r.left + (800 / 1600) * r.width, clientY: r.top + (300 / 1000) * r.height,
+      }));
+    })()`);
+
+    await waitState(b, 'window.__canvas.state.log.size === 1', 15_000);
+    await settled(b);
+
+    // The decisive assertion: the abandoned id must not have opened a second,
+    // never-ending live stroke on the peer.
+    assert.equal(await b.eval<number>('window.__canvas.state.live.size'), 0, 'no phantom half-stroke left behind');
+    assert.equal(await b.eval<number>('window.__canvas.state.log.size'), 1, 'exactly one committed stroke');
+    assert.ok((await b.ink([230, 280, 820, 440])) > 300, 'the stroke drawn while offline arrived in full');
+    await closeBoth(a, b);
+  });
+
   it('survives a resize by re-rasterising at the new resolution', async (t) => {
     if (maybeSkip(t)) return;
     const { a, b } = await open();

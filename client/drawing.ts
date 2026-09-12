@@ -36,6 +36,8 @@ const CURSOR_MIN_DELTA = 0.6;
 export interface DrawingHooks {
   send(msg: ClientMessage): void;
   sendNow(msg: ClientMessage): void;
+  /** Retract anything still queued for a stroke id we have abandoned. */
+  dropQueuedFor(sid: string): void;
   /** Mark a world-space region as needing a repaint. */
   dirty(box: BBox): void;
   /** The local brush cursor moved or changed. */
@@ -153,6 +155,9 @@ export class DrawingController {
     const restarted: ActiveStroke[] = [];
     for (const stroke of this.active.values()) {
       this.state.removeOwnLive(stroke.sid);
+      // Anything still queued under the old id would open a stroke the server
+      // never sees the end of.
+      this.hooks.dropQueuedFor(stroke.sid);
       stroke.sid = this.nextStrokeId();
       stroke.outbox = [];
       stroke.lastFlush = 0;

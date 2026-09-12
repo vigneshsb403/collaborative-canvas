@@ -81,6 +81,7 @@ const transport = new Transport(currentRoom(), storedName(), {
 const drawing = new DrawingController(overlayCanvas, state, {
   send: (msg) => transport.send(msg),
   sendNow: (msg) => transport.sendNow(msg),
+  dropQueuedFor: (sid) => transport.dropQueuedFor(sid),
   dirty: (box) => renderer.markDirty(box),
   overlayDirty: () => syncLocalBrush(),
   styleChanged: () => {

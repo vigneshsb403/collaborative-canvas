@@ -136,7 +136,7 @@ export class Hub {
       }
       case 'points': {
         const res = room.state.addPoints(userId, msg.sid, msg.pts);
-        if (!res.ok) return this.protocolError(session, res.code, res.message);
+        if (!res.ok) return this.softFail(session, res.code, res.message);
         if (res.value.length > 0) {
           room.broadcast({ t: 'points', sid: msg.sid, userId, pts: res.value }, userId);
         }
@@ -151,7 +151,7 @@ export class Hub {
             room.broadcast({ t: 'cancel', sid: String(msg.sid), userId }, userId);
             return true;
           }
-          return this.protocolError(session, res.code, res.message);
+          return this.softFail(session, res.code, res.message);
         }
         const { op, desync } = res.value;
         if (desync) {
@@ -336,6 +336,20 @@ export class Hub {
     }
     room.broadcast({ t: 'leave', userId });
     this.log('leave', { room: room.id, userId, reason, users: room.size });
+  }
+
+  /**
+   * Report a failure that a well-behaved client can legitimately hit — most of
+   * all `no_stroke`, which happens whenever a stroke's messages arrive after the
+   * server has dropped the pending stroke (a reconnect, or a stale window). It
+   * must not count towards the abuse strikes.
+   */
+  private softFail(session: Session, code: string, message: string): boolean {
+    if (code === 'no_stroke' || code === 'forbidden') {
+      session.conn.send({ t: 'error', code, message });
+      return false;
+    }
+    return this.protocolError(session, code, message);
   }
 
   private protocolError(session: Session, code: string, message: string): boolean {

@@ -131,6 +131,18 @@ export class Transport {
     }
   }
 
+  /**
+   * Drop anything still queued for a stroke that no longer exists.
+   *
+   * A stroke interrupted by a reconnect is re-issued under a fresh id, so its
+   * original `begin`/`points` must not reach the server: they would open a
+   * pending stroke that never ends, leaving a phantom half-stroke on every other
+   * screen until the author disconnects.
+   */
+  dropQueuedFor(sid: string): void {
+    this.queue = this.queue.filter((msg) => !('sid' in msg && msg.sid === sid));
+  }
+
   /** Send immediately, bypassing the coalescing window (used for `end`). */
   sendNow(msg: ClientMessage): void {
     this.queue.push(msg);
