@@ -69,10 +69,14 @@ export async function buildClient({ log = true } = {}) {
   const cssName = `style.${hash(css)}.css`;
   await writeFile(join(assetsDir, cssName), css);
 
+  // Root-relative, not relative: the app shell is also served for path-style
+  // room URLs (`/studio/`), where a relative reference would resolve to
+  // `/studio/assets/...` and 404.
   const html = (await readFile(join(clientDir, 'index.html'), 'utf8'))
-    .replace('href="style.css"', `href="assets/${cssName}"`)
-    .replace('src="app.js"', `src="assets/${jsName}"`);
-  if (html.includes('href="style.css"') || html.includes('src="app.js"')) {
+    .replace('href="style.css"', `href="/assets/${cssName}"`)
+    .replace('src="app.js"', `src="/assets/${jsName}"`)
+    .replace('src="config.js"', 'src="/config.js"');
+  if (html.includes('href="style.css"') || html.includes('src="app.js"') || html.includes('src="config.js"')) {
     throw new Error('index.html asset references did not get rewritten');
   }
   await writeFile(join(outDir, 'index.html'), html);

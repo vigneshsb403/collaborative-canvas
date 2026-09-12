@@ -20,7 +20,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, it } from 'node:test';
 import type { Browser, ConsoleMessage, Page } from 'playwright-core';
-import { startHarness, type Harness } from './helpers.js';
+import { startHarness, startVercelLikeHarness, type Harness } from './helpers.js';
 
 /**
  * Closures passed to `page.evaluate` execute in the browser, but this file is
@@ -421,6 +421,84 @@ describe('browser: global undo', () => {
     await settled(a);
     assert.ok((await a.ink(box)) > 300, 'undoing the clear brought the drawing back');
     await closeBoth(a, b);
+  });
+});
+
+describe('browser: the Vercel deployment shape', () => {
+  it('discovers it cannot upgrade, falls back to SSE, and still collaborates', async (t) => {
+    if (maybeSkip(t)) return;
+    const br = browser;
+    if (br === null) throw new Error('no browser');
+
+    // Static files plus one function. No WebSocket endpoint exists at all, so
+    // the client must work this out for itself — exactly as on Vercel.
+    const vercel = await startVercelLikeHarness(PUBLIC_DIR);
+    try {
+      const room = `vercel${++roomSeq}`;
+      const url = `http://127.0.0.1:${vercel.port}/?room=${room}`;
+      const pages: Client[] = [];
+      for (let i = 0; i < 2; i++) {
+        const context = await br.newContext({ viewport: { width: 1280, height: 900 } });
+        const page = await context.newPage();
+        page.on('pageerror', (err: Error) => pageErrors.push(`${room}: ${err.message}`));
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction("window.__canvas !== undefined && window.__canvas.state.selfId !== null", undefined, {
+          timeout: 20_000,
+        });
+        pages.push(wrap(page));
+      }
+      const [a, b] = pages as [Client, Client];
+      for (const c of pages) await waitState(c, 'window.__canvas.state.users.size === 2', 15_000);
+
+      assert.equal(await a.eval<string>('window.__canvas.transport.kind'), 'sse', 'fell back without being told to');
+      assert.equal(await a.eval<string>('window.__canvas.transport.status'), 'online');
+
+      await a.eval("window.__canvas.drawing.setColor('#aa00aa'); window.__canvas.drawing.setWidth(16)");
+      await stroke(a, [
+        [300, 300],
+        [700, 550],
+        [1100, 350],
+      ]);
+      await waitState(b, 'window.__canvas.state.log.size === 1', 15_000);
+      await settled(b);
+      assert.ok((await b.ink([280, 280, 1120, 570])) > 500, 'the stroke crossed a serverless-shaped deployment');
+
+      // And global undo works over the same pair of plain HTTP calls.
+      await b.page.keyboard.press('Control+z');
+      await waitState(a, 'window.__canvas.state.log.ops[0].undone === true', 15_000);
+      await settled(a);
+      assert.equal(await a.ink([280, 280, 1120, 570]), 0);
+
+      for (const c of pages) await c.page.context().close();
+    } finally {
+      await vercel.close();
+    }
+  });
+
+  it('loads the app shell from a path-style room URL', async (t) => {
+    if (maybeSkip(t)) return;
+    const br = browser;
+    if (br === null) throw new Error('no browser');
+    const vercel = await startVercelLikeHarness(PUBLIC_DIR);
+    try {
+      const context = await br.newContext({ viewport: { width: 1000, height: 800 } });
+      const page = await context.newPage();
+      const failures: string[] = [];
+      page.on('response', (res) => {
+        if (res.status() >= 400) failures.push(`${res.status()} ${res.url()}`);
+      });
+      // Trailing slash: a relative asset reference would resolve to
+      // /studio/assets/... and 404 here.
+      await page.goto(`http://127.0.0.1:${vercel.port}/studio/`, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction("window.__canvas !== undefined && window.__canvas.state.selfId !== null", undefined, {
+        timeout: 20_000,
+      });
+      assert.equal(await page.evaluate('window.__canvas.state.roomId'), 'studio');
+      assert.deepEqual(failures, [], 'every asset resolved');
+      await context.close();
+    } finally {
+      await vercel.close();
+    }
   });
 });
 

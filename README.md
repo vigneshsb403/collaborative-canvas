@@ -33,7 +33,7 @@ laptop to collaborate across devices.
 |---|---|
 | `npm start` | build everything, then serve on :3000 |
 | `npm run dev` | same, with the client, server and types all rebuilding on change |
-| `npm test` | the whole suite — 174 tests, including real-browser end-to-end tests |
+| `npm test` | the whole suite — 176 tests, including real-browser end-to-end tests |
 | `npm run test:server` | everything except the browser tests (no Chrome needed) |
 | `npm run typecheck` | strict typecheck of both the server and the client |
 
@@ -153,7 +153,7 @@ the undo design, is in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
 ## Testing
 
-174 tests, no mocks of the things that matter — the WebSocket tests use a real
+176 tests, no mocks of the things that matter — the WebSocket tests use a real
 `ws` client against a real server on an ephemeral port, and the browser tests
 drive real Chrome and assert on real canvas pixels.
 
@@ -169,7 +169,7 @@ npm test
 | `client-state` | 26 | the browser's reconciliation logic, dirty-region derivation, history-gap detection |
 | `integration-ws` | 37 | live streaming order, presence, reconnect deltas, superseded connections, rate limiting, malformed and oversized frames |
 | `integration-sse` | 18 | the Vercel transport, including window expiry and reopen — and a WebSocket client sharing a room with an SSE client |
-| `e2e-browser` | 12 | two real Chrome pages on one canvas: pixel-verified cross-user drawing, live streaming before commit, global and scoped undo, clear and restore, eraser, cursors, reload resync, resize |
+| `e2e-browser` | 14 | two real Chrome pages on one canvas: pixel-verified cross-user drawing, live streaming before commit, global and scoped undo, clear and restore, eraser, cursors, reload resync, resize — plus a server shaped exactly like Vercel (static files, one function, **no WebSocket endpoint**) where the client has to discover the fallback for itself |
 
 The browser suite uses `playwright-core`, which downloads no browsers — it drives
 the Chrome already on the machine, and skips cleanly if there is none, so
@@ -274,7 +274,7 @@ collaborative-canvas/
 │   ├── oplog.ts            the op log and the visibility rule
 │   └── geometry.ts         simplification, bounds, sanitisers
 ├── api/rt.ts               Vercel function (wraps server/serverless.ts)
-├── test/                   174 tests
+├── test/                   176 tests
 ├── scripts/                build and dev runners
 ├── vercel.json
 ├── README.md

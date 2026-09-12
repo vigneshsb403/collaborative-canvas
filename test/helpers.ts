@@ -7,8 +7,12 @@
  * therefore exercises the production code path end to end.
  */
 
+import { createServer } from 'node:http';
+import { createReadStream, existsSync, statSync } from 'node:fs';
+import { extname, join, normalize } from 'node:path';
 import { WebSocket } from 'ws';
 import { createCanvasServer, type CanvasServer } from '../server/server.js';
+import { handleRealtimeRequest } from '../server/serverless.js';
 import { PROTOCOL_VERSION, type ClientMessage, type ServerMessage } from '../shared/protocol.js';
 
 export interface Harness {
@@ -24,6 +28,63 @@ export async function startHarness(opts: { serveStatic?: boolean } = {}): Promis
     port,
     server,
     close: () => server.close(),
+  };
+}
+
+const MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+};
+
+/**
+ * A server shaped exactly like the Vercel deployment: static files out of
+ * `public/`, one function at `/api/rt`, and **no WebSocket endpoint at all**.
+ *
+ * This is what proves the zero-config Vercel story end to end — the client has
+ * to discover that it cannot upgrade and fall back to SSE on its own, which no
+ * other test exercises because every other server here speaks WebSocket.
+ */
+export async function startVercelLikeHarness(publicDir: string): Promise<{ port: number; close(): Promise<void> }> {
+  const server = createServer((req, res) => {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    if (url.pathname === '/api/rt') {
+      void handleRealtimeRequest(req, res);
+      return;
+    }
+    // Vercel serves public/ at the root and rewrites unknown paths to the shell.
+    const rel = normalize(decodeURIComponent(url.pathname)).replace(/^([/\\.]+)/, '');
+    let file = join(publicDir, rel);
+    if (rel === '' || !existsSync(file) || statSync(file).isDirectory()) {
+      file = join(publicDir, 'index.html');
+    }
+    if (!existsSync(file)) {
+      res.statusCode = 404;
+      res.end('not found');
+      return;
+    }
+    res.statusCode = 200;
+    res.setHeader('Content-Type', MIME[extname(file)] ?? 'application/octet-stream');
+    createReadStream(file).pipe(res);
+  });
+
+  const port = await new Promise<number>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const addr = server.address();
+      resolve(typeof addr === 'object' && addr !== null ? addr.port : 0);
+    });
+  });
+
+  return {
+    port,
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.closeAllConnections?.();
+        server.close(() => resolve());
+      }),
   };
 }
 
