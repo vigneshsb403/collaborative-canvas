@@ -236,25 +236,26 @@ Those tests earned their keep. Three real bugs came out of them:
 
 ## Time spent
 
-Built in one continuous session on 12 September 2026, **21:35 → 22:45 local time
-(about 1h10m)**, from an empty git repository to the state in this tree. The commit
-timestamps are the record.
+Built in one continuous session on 12 September 2026, **21:35 → 22:35 local time
+— almost exactly one hour**, from `git init` on an empty directory to the state in
+this tree. The commit timestamps are the record; about 8,100 lines of TypeScript,
+CSS and HTML, of which roughly a third is tests.
 
 Roughly how it divided:
 
 | | |
 |---|---|
-| Protocol, op log, undo engine, rooms, hub | ~20 min |
-| Both transports (WebSocket server, SSE/POST + Vercel function) | ~10 min |
-| Test suite (162 Node tests, written alongside the code) | ~15 min |
-| Browser client — renderer, input, transport, UI, build | ~20 min |
-| Browser e2e tests, and fixing the one real bug they found | ~10 min |
-| README + ARCHITECTURE | ~10 min |
+| Protocol, op log, undo engine, rooms, hub | ~16 min |
+| Both transports (WebSocket server, SSE/POST + Vercel function) | ~8 min |
+| Node test suite, written alongside the code rather than after it | ~12 min |
+| Browser client — renderer, input, transport, UI, build pipeline | ~20 min |
+| Browser end-to-end tests, and the three real bugs they found | ~12 min |
+| README + ARCHITECTURE | ~12 min |
 
-It was written by Claude (Opus 5) driving the terminal, with the tests run at each
-step rather than at the end — which is why the two bugs that did surface (the
-antialiasing fringe after undo, and two wrong assertions of my own) were caught by
-the suite instead of by a reviewer.
+It was written by Claude (Opus 5) driving a terminal, running the suite at each
+step rather than at the end. That is why the bugs listed under
+[Testing](#testing) were caught by the tests instead of by a reviewer — and why
+the last of them was verified by reverting the fix to watch the test fail.
 
 ---
 
